@@ -21,7 +21,7 @@ package com.wso2.org.dsscall.mediator;
 
 import org.apache.axiom.om.OMElement;
 import org.apache.synapse.Mediator;
-import org.apache.synapse.config.xml.AbstractDBMediatorSerializer;
+import org.apache.synapse.config.xml.AbstractMediatorSerializer;
 
 
 /**
@@ -29,7 +29,7 @@ import org.apache.synapse.config.xml.AbstractDBMediatorSerializer;
  *
  * @see DSSCallMediatorSerializer
  */
-public class DSSCallMediatorSerializer extends AbstractDBMediatorSerializer {
+public class DSSCallMediatorSerializer extends AbstractMediatorSerializer {
 
     public OMElement serializeSpecificMediator(Mediator m) {
 
@@ -40,7 +40,6 @@ public class DSSCallMediatorSerializer extends AbstractDBMediatorSerializer {
         DSSCallMediator mediator = (DSSCallMediator) m;
         OMElement dssCall = fac.createOMElement("dsscall", synNS);
         saveTracingState(dssCall,mediator);
-        serializeDBInformation(mediator, dssCall);
 
         return dssCall;
     }

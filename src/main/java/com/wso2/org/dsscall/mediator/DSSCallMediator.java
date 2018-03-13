@@ -1,136 +1,195 @@
-/*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *   * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
- */
-
 package com.wso2.org.dsscall.mediator;
 
+import org.apache.axiom.om.OMElement;
+import org.apache.axis2.AxisFault;
+import org.apache.axis2.description.AxisOperation;
+import org.apache.axis2.description.AxisService;
 import org.apache.synapse.MessageContext;
-import org.apache.synapse.SynapseLog;
-import org.apache.synapse.commons.transaction.TranscationManger;
-import org.apache.synapse.mediators.db.AbstractDBMediator;
-import org.apache.synapse.mediators.db.Statement;
+import org.apache.synapse.core.axis2.Axis2MessageContext;
+import org.apache.synapse.mediators.AbstractMediator;
+import org.wso2.carbon.dataservices.core.DataServiceFault;
+import org.wso2.carbon.dataservices.core.DataServiceProcessor;
+import org.wso2.carbon.dataservices.core.dispatch.SingleDataServiceRequest;
+import org.wso2.carbon.dataservices.core.engine.DataService;
+import org.wso2.carbon.dataservices.core.engine.ParamValue;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Connection;
+import javax.xml.namespace.QName;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 /**
- * Simple database table lookup mediator. Designed only for read/lookup
+ * DSSCall mediator
  */
-public class DSSCallMediator extends AbstractDBMediator {
+public class DSSCallMediator extends AbstractMediator {
+	private String DSName = "";
+	private String request = "";
 
-	protected void processStatement(Statement stmnt, MessageContext msgCtx) {
 
-		SynapseLog synLog = getLog(msgCtx);
+	public boolean mediate(MessageContext messageContext) {
 
-		// execute the prepared statement, and extract the first result row and
-		// set as message context properties, any results that have been specified
-		Connection con = null;
-		ResultSet rs = null;
-		PreparedStatement ps = null;
-		boolean threadInTx = false;
+		System.out.println("Mediator starts successfully");
+		String serviceName = getDSName();
+		String serviceRequest = getRequest();
+		System.out.println("request"+getRequest());
+
+		/*Casting the synapse message context to axis2 message context*/
+		org.apache.axis2.context.MessageContext axis2MessageContext = ((Axis2MessageContext) messageContext)
+				.getAxis2MessageContext();
+
+		System.out.println(axis2MessageContext.getServiceContext().getName());
+
+
+
 		try {
-			if(TranscationManger.isThreadHasEnlistment()){
-				threadInTx = true;
-				try {
-					con = TranscationManger.addConnection(this.getDataSource());
-				}catch (Exception e)
-				{
-					handleException("SQL Error while adding/getting connection to/from cache : " +
-							stmnt.getRawStatement() +
-							" against DataSource : " + getDSName(), e, msgCtx);
-				}
-			}else{
-				con = this.getDataSource().getConnection();
+
+			AxisService axisService = axis2MessageContext.getConfigurationContext().getAxisConfiguration()
+					.getService(serviceName);
+			axis2MessageContext.setAxisService(axisService);
+
+			/*casting data service from axis service*/
+			DataService dataService = (DataService)axisService.getParameter("org.wso2.ws.dataservice.dataservice.obj")
+					.getValue();
+
+			System.out.println("DS Name: "+dataService.getName());
+			System.out.println("DS Operations: "+dataService.getOperationNames());
+			System.out.println("DS Queries: "+dataService.getQueries());
+			System.out.println(axis2MessageContext.getEnvelope().getBody());
+			System.out.println(axis2MessageContext.getEnvelope());
+			//axis2MessageContext.getEnvelope();
+
+			System.out.println(axis2MessageContext.getEnvelope().getBody().getFirstElement());
+			OMElement element = axis2MessageContext.getEnvelope().getBody().getFirstElement();
+			Map<String, ParamValue> paramValue = getSingleInputValuesFromOM(element);
+			System.out.println(paramValue);
+			SingleDataServiceRequest singleDataServiceRequest
+					= new SingleDataServiceRequest(dataService,serviceRequest,paramValue);
+
+			System.out.println(singleDataServiceRequest.processRequest());
+
+			System.out.println("SingleDataServiceRequest completed");
+
+			/*Get the operations(Callable requests) using axis service*/
+			Iterator<AxisOperation> axisOperationIterator = axisService.getOperations();
+			while(axisOperationIterator.hasNext())
+			{
+				System.out.println(axisOperationIterator.next().getName());
 			}
 
+			System.out.println("Operation list finished");
 
-			ps = getPreparedStatement(stmnt, con, msgCtx);
-			rs = ps.executeQuery();
+			QName qName = new QName(serviceRequest);
+			axis2MessageContext.getAxisMessage().getAxisOperation().setName(qName);
 
-			if (rs.next()) {
-				if (synLog.isTraceOrDebugEnabled()) {
-					synLog.traceOrDebug(
-							"Processing the first row returned : " + stmnt.getRawStatement());
-				}
 
-				for (String propName : stmnt.getResultsMap().keySet()) {
+			System.out.println(axis2MessageContext.getAxisMessage().getAxisOperation().getName());
 
-					String columnStr =  stmnt.getResultsMap().get(propName);
-					Object obj;
-					try {
-						int colNum = Integer.parseInt(columnStr);
-						obj = rs.getObject(colNum);
-					} catch (NumberFormatException ignore) {
-						obj = rs.getObject(columnStr);
-					}
 
-					if (obj != null) {
-						if (synLog.isTraceOrDebugEnabled()) {
-							synLog.traceOrDebug("Column : " + columnStr +
-									" returned value : " + obj +
-									" Setting this as the message property : " + propName);
-						}
-						msgCtx.setProperty(propName, obj.toString());
-					} else {
-						if (synLog.isTraceOrDebugEnabled()) {
-							synLog.traceOrDebugWarn("Column : " + columnStr +
-									" returned null Skip setting message property : " + propName);
-						}
-					}
-				}
-			} else {
-				if (synLog.isTraceOrDebugEnabled()) {
-					synLog.traceOrDebug("Statement : "
-							+ stmnt.getRawStatement() + " returned 0 rows");
-				}
-			}
-
-		} catch (SQLException e) {
-			handleException("SQL Exception occurred while executing statement : " +
-					stmnt.getRawStatement() +
-					" against DataSource : " + getDSName(), e, msgCtx);
-		} catch (Exception e) {
-			handleException("Error executing statement : " + stmnt.getRawStatement() +
-					" against DataSource : " + getDSName(), e, msgCtx);
-		} finally {
-			if (rs != null) {
-				try {
-					rs.close();
-				} catch (SQLException e) {}
-			}
-			if (ps != null) {
-				try {
-					ps.close();
-				} catch (SQLException ignore) {}
-			}
-			if (con != null && !threadInTx) {
-				try {
-					con.close();
-				} catch (SQLException ignore) {}
-			}
+		} catch (AxisFault axisFault) {
+			axisFault.printStackTrace();
+		} catch (DataServiceFault dataServiceFault) {
+			dataServiceFault.printStackTrace();
 		}
-	}
+		//access the dss using DataServiceProcessor
+		System.out.println("Access the dss using DataServiceProcessor");
+		try {
+			OMElement omElement = DataServiceProcessor.dispatch(axis2MessageContext);
+			System.out.println(omElement);
+				//create soap envelope
+			/*SOAPFactory fac = getSOAPFactoryHere(axis2MessageContext);
+			SOAPEnvelope envelope = fac.getDefaultEnvelope();
+			if (omElement!= null) {
+				envelope.getBody().addChild(omElement);
+			}
+			axis2MessageContext.setEnvelope(envelope);*/
 
-	@Override
-	public boolean isContentAltering() {
+		} catch (DataServiceFault dataServiceFault) {
+			dataServiceFault.printStackTrace();
+		}
+
+		System.out.println("SOAP Envelope");
+		System.out.println(axis2MessageContext.getEnvelope());
+		System.out.println("Mediator function completed!");
 		return true;
 	}
 
+
+
+	private static Map<String, ParamValue> getSingleInputValuesFromOM(OMElement inputMessage) {
+		if (inputMessage == null) {
+			return new HashMap();
+		} else {
+			Map<String, ParamValue> inputs = new HashMap();
+			Map<String, List<OMElement>> inputMap = new HashMap();
+			Iterator iter = inputMessage.getChildElements();
+
+			List omElList;
+			while(iter.hasNext()) {
+				OMElement element = (OMElement)iter.next();
+				String name = element.getLocalName();
+				if (!inputMap.containsKey(name)) {
+					inputMap.put(name, new ArrayList());
+				}
+
+				omElList = (List)inputMap.get(name);
+				omElList.add(element);
+			}
+
+			ParamValue paramValue;
+			String key;
+			for(Iterator var11 = inputMap.keySet().iterator(); var11.hasNext(); inputs.put(key, paramValue)) {
+				key = (String)var11.next();
+				omElList = (List)inputMap.get(key);
+				if (omElList.size() == 1) {
+					paramValue = new ParamValue(getTextValueFromOMElement((OMElement)omElList.get(0)));
+				} else {
+					paramValue = new ParamValue(2);
+					Iterator var9 = omElList.iterator();
+
+					while(var9.hasNext()) {
+						OMElement omEl = (OMElement)var9.next();
+						paramValue.addToArrayValue(new ParamValue(getTextValueFromOMElement(omEl)));
+					}
+				}
+			}
+
+			return inputs;
+		}
+	}
+	private static String getTextValueFromOMElement(OMElement omEl) {
+		String nillValue = omEl.getAttributeValue(new QName("http://www.w3.org/2001/XMLSchema-instance", "nil"));
+		return nillValue == null || !nillValue.equals("1") && !nillValue.equals("true") ? omEl.getText() : null;
+	}
+
+	public void setDSName(String DSName) {
+
+		this.DSName = DSName;
+	}
+
+	public String getDSName() {
+		return DSName;
+	}
+
+	public String getRequest() {
+		return request;
+	}
+
+	public void setRequest(String request) {
+		this.request = request;
+	}
+	/**
+	 * This is to setup soap envelope
+	 */
+	/*private SOAPFactory getSOAPFactoryHere(org.apache.axis2.context.MessageContext msgContext) throws AxisFault {
+		String nsURI = msgContext.getEnvelope().getNamespace().getNamespaceURI();
+		if ("http://www.w3.org/2003/05/soap-envelope".equals(nsURI)) {
+			return OMAbstractFactory.getSOAP12Factory();
+		} else if ("http://schemas.xmlsoap.org/soap/envelope/".equals(nsURI)) {
+			return OMAbstractFactory.getSOAP11Factory();
+		} else {
+			throw new AxisFault(Messages.getMessage("invalidSOAPversion"));
+		}
+	}*/
 }
