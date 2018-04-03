@@ -12,81 +12,18 @@
     <CApp.type>lib/synapse/mediator</CApp.type>
   </properties>
   <dependencies>
-    <dependency>
-      <groupId>commons-codec.wso2</groupId>
-      <artifactId>commons-codec</artifactId>
-      <version>1.4.0.wso2v1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.httpcomponents.wso2</groupId>
-      <artifactId>httpcore</artifactId>
-      <version>4.3.3.wso2v1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.woden.wso2</groupId>
-      <artifactId>woden</artifactId>
-      <version>1.0.0.M9-wso2v1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.wso2.orbit.commons-httpclient</groupId>
-      <artifactId>commons-httpclient</artifactId>
-      <version>3.1.0.wso2v3</version>
-    </dependency>
-    <dependency>
-      <groupId>wsdl4j.wso2</groupId>
-      <artifactId>wsdl4j</artifactId>
-      <version>1.6.2.wso2v4</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
-      <version>1.1.1</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-io.wso2</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>2.4.0.wso2v1</version>
-    </dependency>
+
     <dependency>
       <groupId>org.apache.synapse</groupId>
       <artifactId>synapse-core</artifactId>
       <version>2.1.7-wso2v7</version>
     </dependency>
-    <dependency>
-      <groupId>org.apache.ws.commons.schema.wso2</groupId>
-      <artifactId>XmlSchema</artifactId>
-      <version>1.4.7.wso2v3</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.geronimo.specs.wso2</groupId>
-      <artifactId>geronimo-stax-api_1.0_spec</artifactId>
-      <version>1.0.1.wso2v2</version>
-    </dependency>
-    <dependency>
-      <groupId>org.wso2.orbit.org.apache.neethi</groupId>
-      <artifactId>neethi</artifactId>
-      <version>2.0.4.wso2v5</version>
-    </dependency>
-
     <!-- https://mvnrepository.com/artifact/org.wso2.carbon.data/org.wso2.carbon.dataservices.core -->
     <dependency>
       <groupId>org.wso2.carbon.data</groupId>
       <artifactId>org.wso2.carbon.dataservices.core</artifactId>
       <version>4.4.38</version>
     </dependency>
-    <!-- https://mvnrepository.com/artifact/org.wso2.carbon.data/org.wso2.carbon.dataservices.common -->
-    <dependency>
-      <groupId>org.wso2.carbon.data</groupId>
-      <artifactId>org.wso2.carbon.dataservices.common</artifactId>
-      <version>4.4.38</version>
-    </dependency>
-    <!-- https://mvnrepository.com/artifact/org.wso2.carbon.data/org.wso2.carbon.dataservices.ui -->
-    <dependency>
-      <groupId>org.wso2.carbon.data</groupId>
-      <artifactId>org.wso2.carbon.dataservices.ui</artifactId>
-      <version>4.4.38</version>
-    </dependency>
-
 
   </dependencies>
   <repositories>
